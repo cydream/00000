@@ -1,0 +1,213 @@
+name: Judge
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  judge:
+    runs-on: ubuntu-latest
+    env:
+      TL: 2
+      ML_KB: 262144
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compile solution
+        id: compile
+        shell: bash
+        run: |
+          set +e
+          g++ -std=c++17 -O2 -pipe solution.cpp -o solution 2> compile.log
+          status=$?
+          set -e
+
+          if [ "$status" -ne 0 ]; then
+            echo "CE" > result.txt
+            cp compile.log judge_detail.txt
+            exit 0
+          fi
+
+      - name: Run judge
+        if: steps.compile.outcome == 'success'
+        shell: bash
+        run: |
+          python3 <<'PY'
+          import glob
+          import os
+          import subprocess
+          import sys
+
+          TL = int(os.environ.get("TL", "2"))
+          ML_KB = int(os.environ.get("ML_KB", "262144"))
+          result = "AC"
+          details = []
+
+          inputs = sorted(glob.glob("tests/input*.txt"))
+          if not inputs:
+              with open("result.txt", "w", encoding="utf-8") as f:
+                  f.write("RE\n")
+              with open("judge_detail.txt", "w", encoding="utf-8") as f:
+                  f.write("No tests/input*.txt files found.\n")
+              sys.exit(0)
+
+          for input_path in inputs:
+              suffix = os.path.basename(input_path)[5:-4]
+              output_path = f"tests/output{suffix}.txt"
+              if not os.path.exists(output_path):
+                  result = "RE"
+                  details.append(f"Case {suffix}: missing {output_path}")
+                  break
+
+              user_output = f"user_output{suffix}.txt"
+              metrics = f"metrics{suffix}.txt"
+              cmd = (
+                  f"/usr/bin/time -f '__TIME__=%e\\n__MEM__=%M' "
+                  f"timeout -k 1s {TL}s prlimit --as={ML_KB * 1024} -- ./solution "
+                  f"< '{input_path}' > '{user_output}' 2> '{metrics}'"
+              )
+              proc = subprocess.run(cmd, shell=True, executable="/bin/bash")
+              status = proc.returncode
+
+              metric_text = ""
+              if os.path.exists(metrics):
+                  with open(metrics, "r", encoding="utf-8", errors="replace") as f:
+                      metric_text = f.read()
+
+              mem_kb = None
+              time_s = None
+              for line in metric_text.splitlines():
+                  if line.startswith("__TIME__="):
+                      try:
+                          time_s = float(line.split("=", 1)[1])
+                      except ValueError:
+                          pass
+                  elif line.startswith("__MEM__="):
+                      try:
+                          mem_kb = int(line.split("=", 1)[1])
+                      except ValueError:
+                          pass
+
+              if status == 124:
+                  result = "TLE"
+                  details.append(f"Case {suffix}: TLE (>{TL}s)")
+                  break
+
+              if status != 0:
+                  lowered = metric_text.lower()
+                  if status in (137, 139) or "memory" in lowered or "cannot allocate" in lowered or "bad_alloc" in lowered:
+                      result = "MLE"
+                      details.append(f"Case {suffix}: MLE")
+                  else:
+                      result = "RE"
+                      details.append(f"Case {suffix}: RE (exit code {status})")
+                  break
+
+              if mem_kb is not None and mem_kb > ML_KB:
+                  result = "MLE"
+                  details.append(f"Case {suffix}: MLE ({mem_kb} KB > {ML_KB} KB)")
+                  break
+
+              diff_proc = subprocess.run(
+                  ["diff", "-Z", user_output, output_path],
+                  stdout=subprocess.PIPE,
+                  stderr=subprocess.STDOUT,
+                  text=True,
+              )
+              if diff_proc.returncode != 0:
+                  result = "WA"
+                  details.append(f"Case {suffix}: WA")
+                  if diff_proc.stdout:
+                      details.append(diff_proc.stdout[:4000])
+                  break
+
+              details.append(
+                  f"Case {suffix}: AC"
+                  + (f", time={time_s:.3f}s" if time_s is not None else "")
+                  + (f", memory={mem_kb}KB" if mem_kb is not None else "")
+              )
+
+          with open("result.txt", "w", encoding="utf-8") as f:
+              f.write(result + "\n")
+          with open("judge_detail.txt", "w", encoding="utf-8") as f:
+              f.write("\n".join(details) + "\n")
+          PY
+
+      - name: Generate badge and summary
+        shell: bash
+        run: |
+          RESULT=$(tr -d '\n\r' < result.txt)
+          python3 - "$RESULT" <<'PY'
+          import html
+          import sys
+
+          result = sys.argv[1].strip() or "unknown"
+          colors = {
+              "AC": "#4c1",
+              "WA": "#e05d44",
+              "TLE": "#fe7d37",
+              "MLE": "#dfb317",
+              "RE": "#9f9f9f",
+              "CE": "#007ec6",
+          }
+          color = colors.get(result, "#9f9f9f")
+          left = "judge"
+          right = result
+          width = 46 + max(40, len(right) * 7)
+          left_w = 46
+          right_w = width - left_w
+          mid_left = left_w // 2
+          mid_right = left_w + right_w // 2
+          svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="20" role="img" aria-label="judge: {html.escape(right)}">
+  <title>judge: {html.escape(right)}</title>
+  <linearGradient id="s" x2="0" y2="100%">
+    <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
+    <stop offset="1" stop-opacity=".1"/>
+  </linearGradient>
+  <clipPath id="r"><rect width="{width}" height="20" rx="3" fill="#fff"/></clipPath>
+  <g clip-path="url(#r)">
+    <rect width="{left_w}" height="20" fill="#555"/>
+    <rect x="{left_w}" width="{right_w}" height="20" fill="{color}"/>
+    <rect width="{width}" height="20" fill="url(#s)"/>
+  </g>
+  <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11">
+    <text x="{mid_left}" y="15" fill="#010101" fill-opacity=".3">{left}</text>
+    <text x="{mid_left}" y="14">{left}</text>
+    <text x="{mid_right}" y="15" fill="#010101" fill-opacity=".3">{html.escape(right)}</text>
+    <text x="{mid_right}" y="14">{html.escape(right)}</text>
+  </g>
+</svg>'''
+          with open("badge.svg", "w", encoding="utf-8") as f:
+              f.write(svg)
+          PY
+
+          echo "## Judge Result" >> "$GITHUB_STEP_SUMMARY"
+          echo "
+Result: **$RESULT**
+" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          cat judge_detail.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit badge and result
+        shell: bash
+        run: |
+          if [ "${GITHUB_REF_NAME}" != "main" ] && [ "${GITHUB_REF_NAME}" != "master" ]; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add badge.svg result.txt judge_detail.txt
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Update judge result [skip ci]"
+          git push
