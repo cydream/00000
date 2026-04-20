@@ -5,19 +5,45 @@
 A fork-friendly sample online judge problem repository using GitHub Actions.
 
 ## Problem
-Print the following line exactly:
+Print the following line exactly.
 
 ```text
 Hello, World!
 ```
 
-## How to use
+## Input
+There is no input.
+
+## Output
+Print the following line exactly.
+
+```text
+Hello, World!
+```
+
+## Notes
+- Matching is line-sensitive.
+- Extra spaces or a missing newline may cause `WA` depending on the checker.
+
+## Submit your solution
 1. Fork this repository.
 2. Edit `solution.cpp`.
-3. Push to your fork.
-4. Check the Actions run and the badge in this README.
+3. Commit and push to your fork.
+4. Open the **Actions** tab or check the badge at the top of this README.
 
-## Results
+A correct example:
+
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+
+int main() {
+    cout << "Hello, World!\n";
+    return 0;
+}
+```
+
+## Judge results
 This template distinguishes:
 - `AC` Accepted
 - `WA` Wrong Answer
@@ -26,11 +52,12 @@ This template distinguishes:
 - `RE` Runtime Error
 - `CE` Compile Error
 
-## Tests
+## Multiple test cases
 This template supports multiple test cases by placing matching files in `tests/`:
 
 - `input1.txt` / `output1.txt`
 - `input2.txt` / `output2.txt`
+- `input3.txt` / `output3.txt`
 - ...
 
 The workflow runs the submitted program once per input file.
