@@ -162,6 +162,7 @@ jobs:
           PY
 
       - name: Generate badge and summary
+        if: steps.edited.outputs.edited == 'true'
         shell: bash
         run: |
           RESULT=$(tr -d '\n\r' < result.txt)
@@ -219,6 +220,7 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Commit badge and result
+        if: steps.edited.outputs.edited == 'true' && (github.ref_name == 'main' || github.ref_name == 'master')
         shell: bash
         run: |
           if [ "${GITHUB_REF_NAME}" != "main" ] && [ "${GITHUB_REF_NAME}" != "master" ]; then
