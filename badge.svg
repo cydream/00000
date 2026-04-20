@@ -1,19 +1,19 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="120" height="20" role="img" aria-label="judge: no status">
-  <title>judge: no status</title>
-  <linearGradient id="s" x2="0" y2="100%">
-    <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
-    <stop offset="1" stop-opacity=".1"/>
-  </linearGradient>
-  <clipPath id="r"><rect width="120" height="20" rx="3" fill="#fff"/></clipPath>
-  <g clip-path="url(#r)">
-    <rect width="50" height="20" fill="#555"/>
-    <rect x="50" width="70" height="20" fill="#9f9f9f"/>
-    <rect width="120" height="20" fill="url(#s)"/>
-  </g>
-  <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11">
-    <text x="26" y="15" fill="#010101" fill-opacity=".3">judge</text>
-    <text x="26" y="14">judge</text>
-    <text x="85" y="15" fill="#010101" fill-opacity=".3">no status</text>
-    <text x="85" y="14">no status</text>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" width="95" height="20" role="img" aria-label="judge: SKIPPED">
+<title>judge: SKIPPED</title>
+<linearGradient id="s" x2="0" y2="100%">
+  <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
+  <stop offset="1" stop-opacity=".1"/>
+</linearGradient>
+<clipPath id="r"><rect width="95" height="20" rx="3" fill="#fff"/></clipPath>
+<g clip-path="url(#r)">
+  <rect width="46" height="20" fill="#555"/>
+  <rect x="46" width="49" height="20" fill="#9f9f9f"/>
+  <rect width="95" height="20" fill="url(#s)"/>
+</g>
+<g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11">
+  <text x="23" y="15" fill="#010101" fill-opacity=".3">judge</text>
+  <text x="23" y="14">judge</text>
+  <text x="70" y="15" fill="#010101" fill-opacity=".3">SKIPPED</text>
+  <text x="70" y="14">SKIPPED</text>
+</g>
 </svg>
