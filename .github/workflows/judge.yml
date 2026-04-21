@@ -161,65 +161,38 @@ jobs:
               f.write("\n".join(details) + "\n")
           PY
 
-      - name: Generate badge and summary
+      - name: Update README badge
         if: steps.edited.outputs.edited == 'true'
         shell: bash
         run: |
-          RESULT=$(tr -d '\n\r' < result.txt)
-          python3 - "$RESULT" <<'PY'
-          import html
-          import sys
+          RESULT=$(cat result.txt)
 
-          result = sys.argv[1].strip() or "unknown"
-          colors = {
-              "AC": "#4c1",
-              "WA": "#e05d44",
-              "TLE": "#fe7d37",
-              "MLE": "#dfb317",
-              "RE": "#9f9f9f",
-              "CE": "#007ec6",
-          }
-          color = colors.get(result, "#9f9f9f")
-          left = "judge"
-          right = result
-          width = 46 + max(40, len(right) * 7)
-          left_w = 46
-          right_w = width - left_w
-          mid_left = left_w // 2
-          mid_right = left_w + right_w // 2
-          svg = f"""<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{width}\" height=\"20\" role=\"img\" aria-label=\"judge: {html.escape(right)}\">
-          <title>judge: {html.escape(right)}</title>
-          <linearGradient id=\"s\" x2=\"0\" y2=\"100%\">
-            <stop offset=\"0\" stop-color=\"#bbb\" stop-opacity=\".1\"/>
-            <stop offset=\"1\" stop-opacity=\".1\"/>
-          </linearGradient>
-          <clipPath id=\"r\"><rect width=\"{width}\" height=\"20\" rx=\"3\" fill=\"#fff\"/></clipPath>
-          <g clip-path=\"url(#r)\">
-            <rect width=\"{left_w}\" height=\"20\" fill=\"#555\"/>
-            <rect x=\"{left_w}\" width=\"{right_w}\" height=\"20\" fill=\"{color}\"/>
-            <rect width=\"{width}\" height=\"20\" fill=\"url(#s)\"/>
-          </g>
-          <g fill=\"#fff\" text-anchor=\"middle\" font-family=\"Verdana,Geneva,DejaVu Sans,sans-serif\" font-size=\"11\">
-            <text x=\"{mid_left}\" y=\"15\" fill=\"#010101\" fill-opacity=\".3\">{left}</text>
-            <text x=\"{mid_left}\" y=\"14\">{left}</text>
-            <text x=\"{mid_right}\" y=\"15\" fill=\"#010101\" fill-opacity=\".3\">{html.escape(right)}</text>
-            <text x=\"{mid_right}\" y=\"14\">{html.escape(right)}</text>
-          </g>
-          </svg>"""
-          with open("badge.svg", "w", encoding="utf-8") as f:
-              f.write(svg)
+          case "$RESULT" in
+            AC|WA|TLE|MLE|RE|CE) ;;
+            *) exit 0 ;;
+          esac
+
+          python3 <<'PY'
+          import re
+
+          with open('README.md', 'r', encoding='utf-8') as f:
+            data = f.read()
+
+          with open('result.txt', 'r', encoding='utf-8') as f:
+            result = f.read().strip()
+
+          new = re.sub(
+            r'<!-- JUDGE_BADGE_START -->.*?<!-- JUDGE_BADGE_END -->',
+            f'<!-- JUDGE_BADGE_START -->\n![Judge Result](./badges/{result}.svg)\n<!-- JUDGE_BADGE_END -->',
+            data,
+            flags=re.S,
+          )
+
+          with open('README.md', 'w', encoding='utf-8') as f:
+            f.write(new)
           PY
 
-          {
-            echo "## Judge Result"
-            echo
-            echo "Result: **$RESULT**"
-            echo
-            echo '```'
-            cat judge_detail.txt
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-      - name: Commit badge and result
+      - name: Commit result
         if: steps.edited.outputs.edited == 'true' && (github.ref_name == 'main' || github.ref_name == 'master')
         shell: bash
         run: |
@@ -228,7 +201,7 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add badge.svg result.txt judge_detail.txt
+          git add README.md result.txt judge_detail.txt
           if git diff --cached --quiet; then
             exit 0
           fi

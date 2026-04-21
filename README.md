@@ -1,6 +1,8 @@
-# Hello World OJ
+# Hello World!
 
-![Judge Result](./badge.svg)
+<!-- JUDGE_BADGE_START -->
+![Judge Result](./badges/no-status.svg)
+<!-- JUDGE_BADGE_END -->
 
 A fork-friendly sample online judge problem repository using GitHub Actions.
 
