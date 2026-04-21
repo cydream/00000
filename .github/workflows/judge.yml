@@ -213,7 +213,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          UPSTREAM_REPO: ORIGINAL_OWNER/hello-world-oj
+          UPSTREAM_REPO: ORIGINAL_OWNER/00000
           UPSTREAM_BASE_BRANCH: submissions
         run: |
           set -euo pipefail
