@@ -237,33 +237,33 @@ jobs:
 
           mkdir -p records
           python3 - <<'PY'
-import json
-import os
-
-user_name = os.environ["USER_NAME"]
-fork_repo = os.environ["FORK_REPO"]
-fork_branch = os.environ["FORK_BRANCH"]
-commit_sha = os.environ["COMMIT_SHA"]
-source_file = os.environ["SOURCE_FILE"]
-source_sha256 = os.environ["SOURCE_SHA256"]
-submitted_at = os.environ["SUBMITTED_AT"]
-
-data = {
-    "user": user_name,
-    "repo": fork_repo,
-    "branch": fork_branch,
-    "commit": commit_sha,
-    "language": "cpp",
-    "source_file": source_file,
-    "source_sha256": source_sha256,
-    "result": "AC",
-    "submitted_at": submitted_at,
-}
-
-with open(f"records/{user_name}.json", "w", encoding="utf-8") as f:
-    json.dump(data, f, ensure_ascii=False, indent=2)
-    f.write("\n")
-PY
+          import json
+          import os
+          
+          user_name = os.environ["USER_NAME"]
+          fork_repo = os.environ["FORK_REPO"]
+          fork_branch = os.environ["FORK_BRANCH"]
+          commit_sha = os.environ["COMMIT_SHA"]
+          source_file = os.environ["SOURCE_FILE"]
+          source_sha256 = os.environ["SOURCE_SHA256"]
+          submitted_at = os.environ["SUBMITTED_AT"]
+          
+          data = {
+              "user": user_name,
+              "repo": fork_repo,
+              "branch": fork_branch,
+              "commit": commit_sha,
+              "language": "cpp",
+              "source_file": source_file,
+              "source_sha256": source_sha256,
+              "result": "AC",
+              "submitted_at": submitted_at,
+          }
+          
+          with open(f"records/{user_name}.json", "w", encoding="utf-8") as f:
+              json.dump(data, f, ensure_ascii=False, indent=2)
+              f.write("\n")
+          PY
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
