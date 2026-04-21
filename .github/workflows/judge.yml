@@ -207,3 +207,90 @@ jobs:
           fi
           git commit -m "Update judge result [skip ci]"
           git push
+
+      - name: Create or update AC PR to submissions branch
+        if: steps.edited.outputs.edited == 'true' && (github.ref_name == 'main' || github.ref_name == 'master')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          UPSTREAM_REPO: ORIGINAL_OWNER/00000
+          UPSTREAM_BASE_BRANCH: submissions
+        run: |
+          set -euo pipefail
+
+          RESULT=$(cat result.txt 2>/dev/null || echo "UNKNOWN")
+          if [ "$RESULT" != "AC" ]; then
+            echo "Result is not AC. Skipping PR creation."
+            exit 0
+          fi
+
+          USER_NAME="${GITHUB_REPOSITORY_OWNER}"
+          FORK_REPO="${GITHUB_REPOSITORY}"
+          FORK_BRANCH="${GITHUB_REF_NAME}"
+          BRANCH_NAME="ac-record-${USER_NAME}"
+          COMMIT_SHA="${GITHUB_SHA}"
+          SUBMITTED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          SOURCE_FILE="solution.cpp"
+          SOURCE_SHA256=$(sha256sum "$SOURCE_FILE" | awk '{print $1}')
+
+          mkdir -p records
+          cat > "records/${USER_NAME}.json" <<EOF
+{
+  "user": "${USER_NAME}",
+  "repo": "${FORK_REPO}",
+  "branch": "${FORK_BRANCH}",
+  "commit": "${COMMIT_SHA}",
+  "language": "cpp",
+  "source_file": "${SOURCE_FILE}",
+  "source_sha256": "${SOURCE_SHA256}",
+  "result": "AC",
+  "submitted_at": "${SUBMITTED_AT}"
+}
+EOF
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git checkout -B "${BRANCH_NAME}"
+          git add "records/${USER_NAME}.json"
+
+          if git diff --cached --quiet; then
+            echo "No record changes to commit."
+            exit 0
+          fi
+
+          git commit -m "Add AC record for ${USER_NAME} [skip ci]"
+          git push -f origin "${BRANCH_NAME}"
+
+          existing=$(gh pr list \
+            --repo "${UPSTREAM_REPO}" \
+            --base "${UPSTREAM_BASE_BRANCH}" \
+            --head "${USER_NAME}:${BRANCH_NAME}" \
+            --state open \
+            --json number \
+            --jq 'length')
+
+          if [ "$existing" -eq 0 ]; then
+            gh pr create \
+              --repo "${UPSTREAM_REPO}" \
+              --base "${UPSTREAM_BASE_BRANCH}" \
+              --head "${USER_NAME}:${BRANCH_NAME}" \
+              --title "AC record: ${USER_NAME}" \
+              --body "$(cat <<EOF
+This PR was created automatically after an AC result on public tests.
+
+- User: ${USER_NAME}
+- Fork repo: ${FORK_REPO}
+- Fork branch: ${FORK_BRANCH}
+- Commit: ${COMMIT_SHA}
+- Language: cpp
+- Source file: ${SOURCE_FILE}
+- Source sha256: ${SOURCE_SHA256}
+- Run: ${GITHUB_SERVER_URL}/${FORK_REPO}/actions/runs/${GITHUB_RUN_ID}
+
+Base branch: ${UPSTREAM_BASE_BRANCH}
+EOF
+)"
+          else
+            echo "PR already exists for ${USER_NAME}:${BRANCH_NAME} -> ${UPSTREAM_BASE_BRANCH}. Updated branch only."
+          fi
