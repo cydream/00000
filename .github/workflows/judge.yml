@@ -235,6 +235,21 @@ jobs:
 
           export USER_NAME FORK_REPO FORK_BRANCH COMMIT_SHA SOURCE_FILE SOURCE_SHA256 SUBMITTED_AT
 
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # 업스트림 submissions 브랜치를 현재 로컬에 가져옴
+          if git remote get-url upstream >/dev/null 2>&1; then
+            git remote set-url upstream "https://github.com/${UPSTREAM_REPO}.git"
+          else
+            git remote add upstream "https://github.com/${UPSTREAM_REPO}.git"
+          fi
+
+          git fetch upstream "${UPSTREAM_BASE_BRANCH}"
+
+          # 업스트림 submissions 브랜치를 기준으로 기록 브랜치 생성
+          git checkout -B "${BRANCH_NAME}" "upstream/${UPSTREAM_BASE_BRANCH}"
+          
           mkdir -p records
           python3 - <<'PY'
           import json
@@ -265,10 +280,6 @@ jobs:
               f.write("\n")
           PY
 
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          git checkout -B "${BRANCH_NAME}"
           git add "records/${USER_NAME}.json"
 
           if git diff --cached --quiet; then
