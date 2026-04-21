@@ -58,6 +58,7 @@ jobs:
 
       - name: Run judge
         if: steps.edited.outputs.edited == 'true'
+        id: judge
         shell: bash
         run: |
           python3 <<'PY'
@@ -160,7 +161,8 @@ jobs:
           with open("judge_detail.txt", "w", encoding="utf-8") as f:
               f.write("\n".join(details) + "\n")
           PY
-
+          echo "result=$(cat result.txt)" >> "$GITHUB_OUTPUT"
+          
       - name: Update README badge
         if: steps.edited.outputs.edited == 'true'
         shell: bash
@@ -209,7 +211,7 @@ jobs:
           git push
 
       - name: Create AC record branch
-        if: steps.edited.outputs.edited == 'true' && (github.ref_name == 'main' || github.ref_name == 'master')
+        if: steps.edited.outputs.edited == 'true' && steps.judge.outputs.result == 'AC' && (github.ref_name == 'main' || github.ref_name == 'master')
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -217,12 +219,6 @@ jobs:
           UPSTREAM_BASE_BRANCH: submissions
         run: |
           set -euo pipefail
-
-          RESULT=$(cat result.txt 2>/dev/null || echo "UNKNOWN")
-          if [ "$RESULT" != "AC" ]; then
-            echo "Result is not AC. Skipping PR creation."
-            exit 0
-          fi
 
           USER_NAME="${GITHUB_REPOSITORY_OWNER}"
           FORK_REPO="${GITHUB_REPOSITORY}"
@@ -291,19 +287,13 @@ jobs:
           git push -f origin "${BRANCH_NAME}"
 
       - name: Print manual PR link
-        if: steps.edited.outputs.edited == 'true' && (github.ref_name == 'main' || github.ref_name == 'master')
+        if: steps.edited.outputs.edited == 'true' && steps.judge.outputs.result == 'AC' && (github.ref_name == 'main' || github.ref_name == 'master')
         shell: bash
         env:
           UPSTREAM_REPO: cydream/00000
           UPSTREAM_BASE_BRANCH: submissions
         run: |
           set -euo pipefail
-
-          RESULT=$(cat result.txt 2>/dev/null || echo "UNKNOWN")
-          if [ "$RESULT" != "AC" ]; then
-            echo "Result is not AC. Skipping PR link."
-            exit 0
-          fi
 
           USER_NAME="${GITHUB_REPOSITORY_OWNER}"
           BRANCH_NAME="ac-record-${USER_NAME}"
